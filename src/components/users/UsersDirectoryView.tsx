@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   ArrowUpDown,
   Building2,
+  Pencil,
   Check,
   Copy,
   Download,
@@ -52,6 +53,7 @@ export default function UsersDirectoryView({ onSelectTicket, onBackToDashboard }
   const [page, setPage] = useState(1);
 
   const [locModalOpen, setLocModalOpen] = useState(false);
+  const [editingLocationId, setEditingLocationId] = useState<number | null>(null);
   const [mgmtModalOpen, setMgmtModalOpen] = useState(false);
   const [dirErr, setDirErr] = useState('');
 
@@ -160,27 +162,47 @@ export default function UsersDirectoryView({ onSelectTicket, onBackToDashboard }
     }
   };
 
+  const openEditLocation = (location: LocationItem) => {
+    setEditingLocationId(location.id);
+    setLocCode(location.code || '');
+    setLocName(location.name || '');
+    setLocType(location.type || 'Warehouse');
+    setLocCity(location.city || '');
+    setLocState(location.state || '');
+    setLocAddress(location.address || '');
+    setLocMgr(location.manager_name || '');
+    setLocModalOpen(true);
+  };
+
   const handleCreateLocation = async (e: React.FormEvent) => {
     e.preventDefault();
-    await apiFetch('/api/locations', {
-      method: 'POST',
-      body: JSON.stringify({
-        code: locCode,
-        name: locName,
-        type: locType,
-        city: locCity,
-        state: locState,
-        address: locAddress,
-        manager_name: locMgr,
-      }),
-    });
-    setLocModalOpen(false);
-    setLocCode('');
-    setLocName('');
-    setLocCity('');
-    setLocState('');
-    setLocAddress('');
-    loadData();
+    setDirErr('');
+    try {
+      await apiFetch(editingLocationId ? `/api/locations/${editingLocationId}` : '/api/locations', {
+        method: editingLocationId ? 'PATCH' : 'POST',
+        body: JSON.stringify({
+          code: locCode.trim(),
+          name: locName.trim(),
+          type: locType,
+          city: locCity.trim(),
+          state: locState.trim(),
+          address: locAddress.trim(),
+          manager_name: locMgr.trim(),
+        }),
+      });
+      setLocModalOpen(false);
+      setEditingLocationId(null);
+      setLocCode('');
+      setLocName('');
+      setLocType('Warehouse');
+      setLocCity('');
+      setLocState('');
+      setLocAddress('');
+      setLocMgr('');
+      await loadData();
+    } catch (e: any) {
+      setDirErr(e.message || 'Failed to save location');
+    }
   };
 
   const toggleUserStatus = async (userId: number, current: string) => {
@@ -634,7 +656,7 @@ export default function UsersDirectoryView({ onSelectTicket, onBackToDashboard }
           {isSuperAdmin && (
             <button
               type="button"
-              onClick={() => setLocModalOpen(true)}
+              onClick={() => { setEditingLocationId(null); setLocCode(''); setLocName(''); setLocType('Warehouse'); setLocCity(''); setLocState(''); setLocAddress(''); setLocMgr(''); setLocModalOpen(true); }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -652,6 +674,7 @@ export default function UsersDirectoryView({ onSelectTicket, onBackToDashboard }
                 <th className="py-2.5 px-4">City / State</th>
                 <th className="py-2.5 px-4">Site Manager</th>
                 <th className="py-2.5 px-4">Address</th>
+                {isSuperAdmin && <th className="py-2.5 px-4">Action</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -665,6 +688,13 @@ export default function UsersDirectoryView({ onSelectTicket, onBackToDashboard }
                   </td>
                   <td className="py-2.5 px-4">{l.manager_name || '—'}</td>
                   <td className="py-2.5 px-4 text-slate-500">{l.address}</td>
+                  {isSuperAdmin && (
+                    <td className="py-2.5 px-4">
+                      <button type="button" onClick={() => openEditLocation(l)} className="inline-flex items-center gap-1 rounded-md border border-slate-300 dark:border-slate-700 px-2 py-1 hover:bg-slate-50 dark:hover:bg-slate-800">
+                        <Pencil className="w-3 h-3" /> Edit
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -968,7 +998,7 @@ export default function UsersDirectoryView({ onSelectTicket, onBackToDashboard }
             onSubmit={handleCreateLocation}
             className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-3"
           >
-            <h3 className="text-base font-display font-bold">Add Warehouse / Branch</h3>
+            <h3 className="text-base font-display font-bold">{editingLocationId ? 'Edit Warehouse / Branch / Hub' : 'Add Warehouse / Branch'}</h3>
             <input
               required
               placeholder="Location Code (e.g. WH-AMD-07)"
@@ -1025,7 +1055,7 @@ export default function UsersDirectoryView({ onSelectTicket, onBackToDashboard }
             <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setLocModalOpen(false)}
+                onClick={() => { setLocModalOpen(false); setEditingLocationId(null); }}
                 className="px-4 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700"
               >
                 Cancel
@@ -1034,7 +1064,7 @@ export default function UsersDirectoryView({ onSelectTicket, onBackToDashboard }
                 type="submit"
                 className="px-4 py-2 text-xs font-semibold rounded-lg bg-blue-700 text-white"
               >
-                Save Location
+                {editingLocationId ? 'Update Location' : 'Save Location'}
               </button>
             </div>
           </form>
