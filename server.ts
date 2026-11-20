@@ -204,7 +204,7 @@ async function startServer() {
   const server = http.createServer(app);
   attachRealtimeWebSocket(server);
 
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT || 3000);
   server.listen(PORT, '0.0.0.0', () => {
     console.log(`SD Global IT CRM Server listening on http://0.0.0.0:${PORT}`);
   });
