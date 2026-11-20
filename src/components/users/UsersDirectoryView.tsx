@@ -999,6 +999,7 @@ export default function UsersDirectoryView({ onSelectTicket, onBackToDashboard }
             className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-3"
           >
             <h3 className="text-base font-display font-bold">{editingLocationId ? 'Edit Warehouse / Branch / Hub' : 'Add Warehouse / Branch'}</h3>
+            {dirErr && <p role="alert" className="text-xs text-red-600 dark:text-red-400">{dirErr}</p>}
             <input
               required
               placeholder="Location Code (e.g. WH-AMD-07)"
