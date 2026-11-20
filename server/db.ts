@@ -3,9 +3,12 @@ import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';
 
-const dataDir = path.resolve(process.cwd(), 'data');
-const backupsDir = path.join(dataDir, 'backups');
-const uploadsDir = path.resolve(process.cwd(), 'uploads');
+// Set DATA_DIR to a persistent mounted directory in production.
+// Render Free instances have ephemeral filesystems; this setting alone cannot
+// make local SQLite durable on a Free Web Service.
+const dataDir = path.resolve(process.env.DATA_DIR || path.join(process.cwd(), 'data'));
+const backupsDir = path.resolve(process.env.BACKUP_DIR || path.join(dataDir, 'backups'));
+const uploadsDir = path.resolve(process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads'));
 
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
