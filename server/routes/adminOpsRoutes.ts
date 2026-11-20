@@ -106,6 +106,53 @@ router.post('/locations', requireAuth, requireRole('super_admin'), (req: AuthReq
   }
 });
 
+router.patch('/locations/:id', requireAuth, requireRole('super_admin'), (req: AuthRequest, res) => {
+  const locationId = Number(req.params.id);
+  const { code, name, type, city, state, address, manager_name } = req.body;
+
+  if (!Number.isInteger(locationId) || locationId <= 0) {
+    return res.status(400).json({ error: 'Invalid location ID' });
+  }
+  if (!code || !name || !city || !state || !address) {
+    return res.status(400).json({ error: 'Code, name, city, state, and address are required' });
+  }
+
+  try {
+    const existing = db.prepare('SELECT id FROM locations WHERE id = ?').get(locationId) as { id: number } | undefined;
+    if (!existing) {
+      return res.status(404).json({ error: 'Location not found' });
+    }
+
+    db.prepare(
+      'UPDATE locations SET code = ?, name = ?, type = ?, city = ?, state = ?, address = ?, manager_name = ? WHERE id = ?'
+    ).run(
+      String(code).trim(),
+      String(name).trim(),
+      type || 'Warehouse',
+      String(city).trim(),
+      String(state).trim(),
+      String(address).trim(),
+      manager_name ? String(manager_name).trim() : '',
+      locationId
+    );
+
+    writeAuditLog({
+      userId: req.user!.id,
+      userEmail: req.user!.email,
+      roleName: req.user!.role,
+      action: 'UPDATE_LOCATION',
+      entityType: 'location',
+      entityId: String(locationId),
+      details: { code: String(code).trim(), name: String(name).trim() },
+      ipAddress: req.ip,
+    });
+    sendToRoles(['super_admin', 'management'], 'directory:updated', { entity: 'location', action: 'updated' });
+    return res.json({ success: true, id: locationId });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message || 'Failed to update location' });
+  }
+});
+
 router.get('/departments', requireAuth, (_req, res) => {
   const departments = db.prepare('SELECT * FROM departments ORDER BY name ASC').all();
   res.json({ departments });
